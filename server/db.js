@@ -77,11 +77,21 @@ const authenticate = async ({ username, password }) => {
     error.status = 401;
     throw error;
   }
-  const token = await jwt.sign({ id: response.rows[0] }, secret);
+  const token = await jwt.sign({ id: response.rows[0].id }, secret);
   return { token };
 };
 
-const findUserWithToken = async (id) => {
+const findUserWithToken = async (token) => {
+  let id;
+  try {
+    const payload = await jwt.verify(token, secret);
+    console.log("PAYLOAD:", payload);
+    id = payload.id;
+  } catch (err) {
+    const error = Error("Not Authorized!");
+    error.status = 401;
+    throw error;
+  }
   const SQL = `
     SELECT id, username FROM users WHERE id=$1;
   `;
@@ -118,6 +128,16 @@ const fetchFavorites = async (user_id) => {
   return response.rows;
 };
 
+const isLoggedIn = async (req, res, next) => {
+  try {
+    console.log("middleware running...");
+    req.user = await findUserWithToken(req.headers.authorization);
+    next();
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   client,
   createTables,
@@ -130,4 +150,5 @@ module.exports = {
   destroyFavorite,
   authenticate,
   findUserWithToken,
+  isLoggedIn,
 };

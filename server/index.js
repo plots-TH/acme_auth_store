@@ -11,6 +11,7 @@ const {
   destroyFavorite,
   authenticate,
   findUserWithToken,
+  isLoggedIn,
 } = require("./db");
 const express = require("express");
 const app = express();
@@ -34,7 +35,7 @@ app.post("/api/auth/login", async (req, res, next) => {
   }
 });
 
-app.get("/api/auth/me", async (req, res, next) => {
+app.get("/api/auth/me", isLoggedIn, async (req, res, next) => {
   try {
     res.send(await findUserWithToken(req.headers.authorization));
   } catch (ex) {
@@ -50,7 +51,7 @@ app.get("/api/users", async (req, res, next) => {
   }
 });
 
-app.get("/api/users/:id/favorites", async (req, res, next) => {
+app.get("/api/users/:id/favorites", isLoggedIn, async (req, res, next) => {
   try {
     res.send(await fetchFavorites(req.params.id));
   } catch (ex) {
@@ -58,7 +59,7 @@ app.get("/api/users/:id/favorites", async (req, res, next) => {
   }
 });
 
-app.post("/api/users/:id/favorites", async (req, res, next) => {
+app.post("/api/users/:id/favorites", isLoggedIn, async (req, res, next) => {
   try {
     res.status(201).send(
       await createFavorite({
@@ -71,14 +72,18 @@ app.post("/api/users/:id/favorites", async (req, res, next) => {
   }
 });
 
-app.delete("/api/users/:user_id/favorites/:id", async (req, res, next) => {
-  try {
-    await destroyFavorite({ user_id: req.params.user_id, id: req.params.id });
-    res.sendStatus(204);
-  } catch (ex) {
-    next(ex);
+app.delete(
+  "/api/users/:user_id/favorites/:id",
+  isLoggedIn,
+  async (req, res, next) => {
+    try {
+      await destroyFavorite({ user_id: req.params.user_id, id: req.params.id });
+      res.sendStatus(204);
+    } catch (ex) {
+      next(ex);
+    }
   }
-});
+);
 
 app.get("/api/products", async (req, res, next) => {
   try {
